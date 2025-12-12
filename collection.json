@@ -1,0 +1,40 @@
+{
+    "ids": [
+        "shopping list/computer.md",
+        "Knowledge/conv.md",
+        "Knowledge/feature map.md",
+        "daily/daily 2.md",
+        "daily/daily 1.md"
+    ],
+    "embeddings": null,
+    "documents": [
+        "### Gaming PC Build Shopping List (Mid-to-High End, ~2025)\n\nHere's a concise shopping list for a solid gaming PC that can handle modern games at 1440p or 4K with high settings. Prices are approximate (USD) as of late 2025.\n\n**Core Components:**\n- CPU: AMD Ryzen 7 7800X3D or Intel Core i7-14700K (~$400\u2013$450)\n- CPU Cooler: 240mm or 360mm AIO liquid cooler (e.g., NZXT Kraken or Arctic Liquid Freezer III) (~$120\u2013$180)\n- Motherboard: B650 (AMD) or Z790 (Intel) chipset with good VRM (~$200\u2013$300)\n- GPU: NVIDIA RTX 4070 Ti Super or RTX 4080 Super / AMD RX 7900 XT (~$700\u2013$1,000)\n- RAM: 32GB (2\u00d716GB) DDR5-6000 CL30 or faster (~$120\u2013$150)\n- Storage: 1TB or 2TB NVMe SSD (PCIe 4.0, e.g., Samsung 990 Pro or WD Black SN850X) (~$100\u2013$180)\n- Power Supply: 850W\u20131000W 80+ Gold or Platinum fully modular (e.g., Corsair RM850x or Seasonic Focus) (~$130\u2013$180)\n- Case: Mid-tower with good airflow (e.g., Fractal Meshify 2, Lian Li Lancool 205 Mesh, or Corsair 4000D) (~$100\u2013$150)\n\n**Optional / Peripherals (if needed):**\n- Extra case fans (3\u20136 pack) for better cooling (~$30\u2013$60)\n- Windows 11 Home license (~$100\u2013$140)\n- 1440p or 4K gaming monitor (144Hz+) (~$300\u2013$600)\n- Mechanical keyboard, gaming mouse, headset (~$100\u2013$300 total)\n\nTotal estimated budget (PC only, excluding peripherals): $1,800\u2013$2,500 depending on exact GPU choice.\n\nThis build will deliver excellent performance for gaming, streaming, and content creation for years to come!",
+        "---\ncreate: 2025-12-08\n---\n### Convolution in Convolutional Neural Networks (CNNs)\n\n**Convolution** is the core operation in Convolutional Neural Networks (CNNs) that allows the network to automatically learn spatial patterns (like edges, textures, and objects) from images or other grid-like data.\n\n- **How it works**:  \n  A small matrix called a **filter** (or **kernel**) slides over the input image (or previous feature map). At each position, the filter performs an **element-wise multiplication** with the overlapping patch of the input, then sums all the results to produce a single output value. This process is repeated across the entire input, creating a new 2D grid called a **feature map**.\n\n- **Key concepts**:\n  - **Parameters**: The filter is usually small (e.g., 3\u00d73 or 5\u00d75) and has learnable weights.\n  - **Stride**: How many pixels the filter moves at each step (stride=1 means moving one pixel at a time; stride=2 reduces the output size).\n  - **Padding**: Adding extra pixels (usually zeros) around the input to control the output size (e.g., \"same\" padding keeps the output size equal to the input).\n  - **Multiple filters**: A convolutional layer typically uses dozens or hundreds of different filters, each learning to detect a different feature.\n\n- **Mathematical view** (2D convolution):  \n  For an input image I and filter K, the output at position (i,j) is:  \n  O(i,j) = \u03a3 \u03a3 I(i+m, j+n) \u00d7 K(m,n)  \n  where the sums are over the filter\u2019s dimensions.\n\n- **Why it\u2019s powerful**:\n  - **Parameter sharing**: The same filter is used across the whole image, drastically reducing the number of parameters compared to fully connected layers.\n  - **Local connectivity**: Each output neuron only looks at a small local region of the input, making it efficient for spatial hierarchies.\n  - **Translation invariance**: The same pattern is detected regardless of where it appears in the image.\n\nIn short, convolution enables CNNs to efficiently extract hierarchical features from raw pixel data, making them the foundation of modern computer vision.",
+        "### Feature Map in Convolutional Neural Networks (CNNs)\n\nA **feature map** (also called **activation map**) is the output produced by a convolutional layer in a CNN when it applies a filter (kernel) to the input data.\n\n- **How it works**:  \n  The filter slides over the input (e.g., an image) and performs element-wise multiplication followed by summation at each position. This results in a 2D grid of values, where each value represents how strongly a particular feature (such as edges, textures, corners, etc.) is detected at that location.\n\n- **Key properties**:\n  - The size of the feature map is usually smaller than the input due to padding and stride settings (e.g., a 224\u00d7224 input with a 3\u00d73 filter and stride 1 may produce a 222\u00d7222 feature map).\n  - Each filter in a convolutional layer generates one feature map, so a layer with 64 filters produces 64 feature maps.\n  - In deeper layers, feature maps capture increasingly complex and abstract features (e.g., early layers detect simple edges, later layers detect objects or parts of objects).\n\n- **Example**:  \n  If you feed an image of a cat into the first convolutional layer, the feature maps might highlight horizontal edges, vertical edges, or color gradients. These maps then become the input for the next layer, allowing the network to build hierarchical representations.\n\nIn short, feature maps are the fundamental way CNNs \u201csee\u201d and learn visual patterns from raw pixel data.",
+        "December 13, 2025\n\nDear Diary,\n\nSaturday started off slowly\u2014I slept in until almost 11, which felt amazing. No alarms, no rush. I made myself a big brunch: scrambled eggs, avocado toast, and fresh orange juice. While eating, I scrolled through some videos and ended up watching a bunch of cooking tutorials (now I really want to try making homemade ramen).\n\nIn the early afternoon, I met my friend Sarah at a little caf\u00e9 downtown. We hadn\u2019t caught up in weeks, so we spent a couple of hours chatting over lattes and pastries. She told me about her new job and I shared some of my recent projects. It was so nice to just laugh and talk without any agenda.\n\nAfter that, I came home and finally tackled some chores I\u2019d been putting off: laundry, tidying up the apartment, and organizing my desk. It wasn\u2019t exciting, but it feels good to have everything neat again. Then I treated myself to a long, hot shower and put on my comfiest hoodie.\n\nFor dinner, I ordered takeout\u2014spicy Thai food\u2014and watched a new comedy movie on Netflix. It was the perfect lazy Saturday evening. Now I\u2019m curled up on the couch with a cup of herbal tea, ready to read a bit before bed.\n\nDays like today are the best\u2014nothing major, just simple, enjoyable moments.\n\nGood night,  \nMe",
+        "---\ncreate: 2025-12-08\n---\n\nDecember 12, 2025\n\nDear Diary,\n\nToday was a pretty relaxed Friday. I woke up a bit late, around 9:30, because I stayed up watching a movie last night. After breakfast (just some toast and coffee), I spent the morning catching up on emails and doing a little work from home. Nothing too stressful, thankfully.\n\nIn the afternoon, I went for a walk in the park near my place. The weather was chilly but sunny, and the air felt really fresh. I listened to a new podcast while walking, and it was nice to clear my head. Then I stopped by the grocery store on the way back and picked up some ingredients to make pasta for dinner.\n\nEvening was cozy\u2014I cooked spaghetti with tomato sauce and garlic bread, watched a couple of episodes of my favorite show, and chatted with a friend on the phone. Now it\u2019s almost midnight, and I\u2019m ready to wind down.\n\nOverall, a simple but good day. Looking forward to the weekend!\n\nGood night,  \nMe"
+    ],
+    "uris": null,
+    "included": [
+        "documents",
+        "metadatas"
+    ],
+    "data": null,
+    "metadatas": [
+        {
+            "type": "md"
+        },
+        {
+            "type": "md"
+        },
+        {
+            "type": "md"
+        },
+        {
+            "type": "md"
+        },
+        {
+            "type": "md"
+        }
+    ]
+}

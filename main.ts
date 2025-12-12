@@ -1,4 +1,5 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Editor, MarkdownView, Menu, Modal, Notice, Plugin, PluginSettingTab, Setting, setIcon, SuggestModal } from 'obsidian';
+import { TFile } from 'obsidian';
 
 // Remember to rename these classes and interfaces!
 
@@ -10,32 +11,127 @@ const DEFAULT_SETTINGS: MyPluginSettings = {
 	mySetting: 'default'
 }
 
-export default class MyPlugin extends Plugin {
+interface Book {
+	title: string;
+	author: string;
+}
+
+const ALL_BOOKS = [
+	{
+		title: 'How to Take Smart Notes',
+		author: 'Sönke Ahrens',
+	},
+	{
+		title: 'Thinking, Fast and Slow',
+		author: 'Daniel Kahneman',
+	},
+	{
+		title: 'Deep Work',
+		author: 'Cal Newport',
+	},
+];
+
+export default class HelloworldPlugin extends Plugin {
 	settings: MyPluginSettings;
 
 	async onload() {
 		await this.loadSettings();
 
-		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (_evt: MouseEvent) => {
+		// 输出插件加载信息
+		console.log("plugin has been loaded");
+
+		// 新增一个图标到左侧的Ribbon，并绑定一个鼠标点击事件
+		const ribbonIconEl = this.addRibbonIcon('dice', 'new added icon', (_evt: MouseEvent) => {
 			// Called when the user clicks the icon.
 			new Notice('This is a notice!');
+
+			// 在这个 ribbon 处创建一个上下文菜单
+			const menu = new Menu();
+
+			// 添加一个选项
+			menu.addItem((item) =>
+				item
+					.setTitle('Copy')
+					.setIcon('documents')
+					.onClick(() => {
+						new Notice('Copied');
+						new SampleModal(this.app, (name) => {
+							new Notice(`Hello, ${name}!`);
+						}).open();
+					})
+			);
+
+			// 当鼠标点击事件发生时，显示这个上下文菜单
+			menu.showAtMouseEvent(_evt);
+
 		});
 		// Perform additional things with the ribbon
 		ribbonIconEl.addClass('my-plugin-ribbon-class');
 
+
+
+		this.registerEvent(this.app.workspace.on('file-menu', (menu, file) => {
+			// 当用户点击鼠标右键时，显示上下文菜单
+			menu.addItem((item) =>
+				item
+					.setTitle('show file path')
+					.setIcon('documents')
+					.onClick(() => {
+						new Notice(file.path);
+					})
+			);
+		}));
+
 		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
 		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
+		statusBarItemEl.setText('caillo');
+		setIcon(statusBarItemEl, "dice")
+
+
+		// 给 Plugin 添加一系列的 command
+		this.addCommand({
+			id: 'test command',
+			name: 'test command',
+			callback: () => {
+				new Notice('test command');
+			}
+		});
+
+		this.addCommand({
+			id: "read-current-file",
+			name: "Read current file",
+			callback: () => {
+				new CurrentFileModal(this.app).open();
+			}
+		})
+
+		this.addCommand({
+			id: "read-file",
+			name: "Read file",
+			callback: () => {
+				new AllFilesModal(this.app).open();
+			}
+		})
 
 		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
 			id: 'open-sample-modal-simple',
 			name: 'Open sample modal (simple)',
 			callback: () => {
-				new SampleModal(this.app).open();
+				new SampleModal(this.app, (name) => {
+					new Notice(`Hello, ${name}!`);
+				}).open();
 			}
 		});
+
+		this.addCommand({
+			id: "open-suggestion-modal",
+			name: "Open suggestion modal",
+			callback: () => {
+				new ExampleSuggestModal(this.app).open();
+			}
+		})
+
 		// This adds an editor command that can perform some operation on the current editor instance
 		this.addCommand({
 			id: 'sample-editor-command',
@@ -56,7 +152,9 @@ export default class MyPlugin extends Plugin {
 					// If checking is true, we're simply "checking" if the command can be run.
 					// If checking is false, then we want to actually perform the operation.
 					if (!checking) {
-						new SampleModal(this.app).open();
+						new SampleModal(this.app, (name) => {
+							new Notice(`Hello, ${name}!`);
+						}).open();
 					}
 
 					// This command will only show up in Command Palette when the check function returns true
@@ -79,7 +177,7 @@ export default class MyPlugin extends Plugin {
 	}
 
 	onunload() {
-
+		console.log("plugin has been unloaded");
 	}
 
 	async loadSettings() {
@@ -90,36 +188,212 @@ export default class MyPlugin extends Plugin {
 		await this.saveData(this.settings);
 	}
 }
-
-class SampleModal extends Modal {
-	constructor(app: App) {
+// Modal 用于展示信息并于用户交互
+export class SampleModal extends Modal {
+	constructor(app: App, onSubmit: (name: string) => void) {
 		super(app);
+		this.setTitle("input somethinsg")
+
+		let name = ""
+		new Setting(this.contentEl)
+			.setName("text 1")
+			.addText((text) => text
+				.setPlaceholder("Enter your secret")
+				.onChange(async (value) => {
+					name = value;
+					new Notice(`value has been changed, ${name}!`);
+				}));
+
+		new Setting(this.containerEl).addButton((button) => button
+			.setButtonText("submit")
+			.setCta()
+			.onClick(() => {
+				this.close();
+				onSubmit(name);
+			}));
 	}
 
 	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
+		console.log(this.containerEl)
 	}
 
 	onClose() {
-		const {contentEl} = this;
+		const { contentEl } = this;
 		contentEl.empty();
 	}
 }
 
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
 
-	constructor(app: App, plugin: MyPlugin) {
+// Modal that shows content of the currently active markdown file
+export class CurrentFileModal extends Modal {
+	constructor(app: App) {
+		super(app);
+		this.setTitle('Current File Content');
+	}
+
+	async onOpen() {
+		const { contentEl } = this;
+		contentEl.empty();
+
+		// Get the active markdown file
+		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (!activeView) {
+			contentEl.createEl('div', { text: 'No active markdown file.', cls: 'no-file' });
+			return;
+		}
+
+		const file = activeView.file;
+		if (!file) {
+			contentEl.createEl('div', { text: 'No file found in active view.', cls: 'no-file' });
+			return;
+		}
+
+		// Create a scrollable container
+		const container = contentEl.createDiv({ cls: 'current-file-container' });
+		container.style.maxHeight = '400px';
+		container.style.overflowY = 'auto';
+		container.style.padding = '8px';
+		container.style.border = '1px solid var(--background-modifier-border)';
+		container.style.borderRadius = '4px';
+
+		try {
+			const content = await this.app.vault.read(file);
+			const pre = container.createEl('pre', { cls: 'file-content' });
+			pre.style.margin = '0';
+			pre.textContent = content;
+		} catch (err) {
+			container.createEl('div', { text: `Failed to read file: ${err}`, cls: 'error' });
+		}
+	}
+
+	onClose() {
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
+
+
+// Modal that lists all markdown files in the vault
+export class AllFilesModal extends Modal {
+	private files: TFile[] = [];
+
+	constructor(app: App) {
+		super(app);
+		this.setTitle('All Files');
+		this.loadFiles();
+	}
+
+	private async loadFiles() {
+		// Get all markdown files in the vault
+		this.files = this.app.vault.getMarkdownFiles();
+		this.renderList();
+	}
+
+	private renderList() {
+		const { contentEl } = this;
+
+		// Clear previous content
+		contentEl.empty();
+
+		// Create a scrollable container
+		const container = contentEl.createDiv({ cls: 'all-files-container' });
+		container.style.maxHeight = '400px';
+		container.style.overflowY = 'auto';
+
+		console.log("print files")
+		console.log(this.files)
+		// Render each file as a clickable item
+		this.files.forEach((file) => {
+			const item = container.createDiv({ cls: 'file-item' });
+			item.style.padding = '4px 8px';
+			item.style.cursor = 'pointer';
+			item.createEl('div', { text: file.path, cls: 'file-path' });
+
+			// Read file content on click
+			item.onClickEvent(async () => {
+				try {
+					const content = await this.app.vault.read(file);
+					console.log(content)
+					new Notice(`Content: ${content.slice(0, 100)}...`);
+				} catch (err) {
+					new Notice(`Failed to read file: ${err}`);
+				}
+			});
+		});
+
+		new Setting(contentEl).addButton((button) => button
+			.setButtonText("submit")
+			.setCta()
+			.onClick(async () => {
+				this.close();
+				new Notice("submit button clicked")
+				try {
+					// 提取TFile对象中需要的属性，避免循环引用
+					const filesData = this.files.map(file => ({
+						path: file.path,
+						name: file.name,
+						extension: file.extension,
+						size: file.size,
+						mtime: file.mtime,
+						ctime: file.ctime
+					}));
+
+					const response = await fetch('http://localhost:5000/test', { // 添加await
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify(filesData)
+					});
+
+					console.log(response)
+
+					if (!response.ok) { // 先检查状态
+						throw new Error(`Server responded with ${response.status}`);
+					}
+
+					const result = await response.json(); // 添加await
+					new Notice(`Server response: ${JSON.stringify(result)}`);
+				} catch (err) {
+					console.log(err)
+					new Notice(`Failed to send file to server: ${err}`);
+				}
+			}));
+
+	}
+
+	onOpen() {
+		console.log('AllFilesModal opened');
+	}
+
+	onClose() {
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
+
+
+
+// 为插件在 setting 中创建一个页面，用于配置插件的设置
+class SampleSettingTab extends PluginSettingTab {
+	plugin: HelloworldPlugin;
+
+	constructor(app: App, plugin: HelloworldPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
 
 	display(): void {
-		const {containerEl} = this;
-
+		const { containerEl } = this;
 		containerEl.empty();
 
+		containerEl.createEl('h1', { text: 'Heading 1' });
+
+		const book = containerEl.createEl('div', { cls: 'book' });
+		book.createEl('div', { text: 'How to Take Smart Notes', cls: 'book__title' });
+		book.createEl('small', { text: 'Sönke Ahrens', cls: 'book__author' });
+
+		new Setting(containerEl).setName("part 1").setHeading();
 		new Setting(containerEl)
 			.setName('Setting #1')
 			.setDesc('It\'s a secret')
@@ -129,6 +403,49 @@ class SampleSettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.settings.mySetting = value;
 					await this.plugin.saveSettings();
+					new Notice(`value has been changed, ${value}!`);
 				}));
+
+		new Setting(containerEl)
+			.setName('Button')
+			.setDesc('With extra button')
+			.addButton(button => button
+				.setButtonText('Click me!')
+				.onClick(() => {
+					new Notice('This is a notice!');
+				})
+			);
+
+		new Setting(containerEl)
+			.setName('Slider')
+			.setDesc('with tooltip')
+			.addSlider(slider => slider.setDynamicTooltip()
+			);
+
+		new Setting(containerEl)
+			.setName('Progress bar')
+			.setDesc('It\'s 50% done')
+			.addProgressBar(bar => bar.setValue(50));
+	}
+}
+
+
+export class ExampleSuggestModal extends SuggestModal<Book> {
+	// Returns all available suggestions.
+	getSuggestions(query: string): Book[] {
+		return ALL_BOOKS.filter((book) =>
+			book.title.toLowerCase().includes(query.toLowerCase())
+		);
+	}
+
+	// Renders each suggestion item.
+	renderSuggestion(book: Book, el: HTMLElement) {
+		el.createEl('div', { text: book.title });
+		el.createEl('small', { text: book.author });
+	}
+
+	// Perform action on the selected suggestion.
+	onChooseSuggestion(book: Book, evt: MouseEvent | KeyboardEvent) {
+		new Notice(`Selected ${book.title}`);
 	}
 }
