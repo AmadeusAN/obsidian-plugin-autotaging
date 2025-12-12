@@ -42,29 +42,38 @@ def readallfile(collection):
 
 def build_hierarchical_tree(clustering):
     """
-    Builds a hierarchical tree as a JSON-serializable dict from the AgglomerativeClustering model.
+    Builds a hierarchical tree as a JSON-serializable dict from the AgglomerativeClustering model,
+    including merge distances and normalized distances.
 
     :param clustering: The fitted AgglomerativeClustering model.
     :return: Dict representing the root of the tree.
     """
     n_samples = len(clustering.labels_)
     children_array = clustering.children_
+    distances = clustering.distances_
+    max_distance = (
+        np.max(distances) if len(distances) > 0 else 1.0
+    )  # Avoid division by zero
 
     # Helper function to build the node recursively
     def build_node(node_idx):
         if node_idx < n_samples:
-            # Leaf node
+            # Leaf node (no distance)
             return {
                 "index": int(node_idx),
                 "type": "leaf",
                 "children": None,
                 "left_node": None,
                 "right_node": None,
+                "distance": None,
+                "normalized_distance": None,
             }
         else:
             # Internal node
             merge_idx = node_idx - n_samples
             left_idx, right_idx = children_array[merge_idx]
+            distance = distances[merge_idx]
+            normalized_distance = distance / max_distance
 
             left_node = build_node(left_idx)
             right_node = build_node(right_idx)
@@ -90,6 +99,8 @@ def build_hierarchical_tree(clustering):
                 "children": all_children,
                 "left_node": left_node,
                 "right_node": right_node,
+                "distance": float(distance),
+                "normalized_distance": float(normalized_distance),
             }
 
     # Root index is n_samples + (n_samples - 2) = 2*n_samples - 2, but since len(children_) = n_samples - 1
@@ -98,32 +109,8 @@ def build_hierarchical_tree(clustering):
 
 
 def hierarchical_clustering(X: np.ndarray) -> list[str]:
-    def plot_dendrogram(model, **kwargs):
-        # Create linkage matrix and then plot the dendrogram
-
-        # create the counts of samples under each node
-        counts = np.zeros(model.children_.shape[0])
-        n_samples = len(model.labels_)
-        for i, merge in enumerate(model.children_):
-            current_count = 0
-            for child_idx in merge:
-                if child_idx < n_samples:
-                    current_count += 1  # leaf node
-                else:
-                    current_count += counts[child_idx - n_samples]
-            counts[i] = current_count
-
-        linkage_matrix = np.column_stack(
-            [model.children_, model.distances_, counts]
-        ).astype(float)
-        # Plot the corresponding dendrogram
-        dendrogram(linkage_matrix, **kwargs)
-
-    print(X.shape)
-
     clustering = AgglomerativeClustering(distance_threshold=0, n_clusters=None)
     clustering.fit(X)
-
     tree = build_hierarchical_tree(clustering)
     return tree
 
@@ -144,17 +131,6 @@ def generate_hierarchical_tags(collection, tree: dict) -> list[str]:
     tree = hierarchical_clustering(all_doc["embeddings"])
 
     Path("tree.json").write_text(json.dumps(tree, indent=4))
-    # hierarchical_tags = []
-
-    # def traverse(node):
-    #     if node["type"] == "leaf":
-    #         hierarchical_tags.append(f"cluster_{node['index']}")
-    #     else:
-    #         traverse(node["left_node"])
-    #         traverse(node["right_node"])
-
-    # traverse(tree)
-    # return hierarchical_tags
 
 
 if __name__ == "__main__":
