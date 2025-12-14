@@ -1,11 +1,11 @@
 {
-    "Category/CNN-Layer": {
-        "#CNN-ConvolutionCore": 1,
-        "#FeatureMap": 2
+    "CNN/Feature": {
+        "CNN-Convolution-Core": 1,
+        "#CNNFeatureMap": 2
     },
-    "High-end-2025-Gaming-PC-Build": 0,
-    "Weekend/Chill": {
-        "#LazySaturdayJoy": 3,
-        "#RelaxedFridayVibes": 4
+    "#GamingPC2025": 0,
+    "Category/LazyWeekend": {
+        "#LazyBlissSaturday": 3,
+        "#LazyFridayVibes": 4
     }
 }

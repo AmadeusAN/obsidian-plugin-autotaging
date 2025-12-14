@@ -1,15 +1,15 @@
 {
     "1": [
-        "Category/CNN-Layer"
+        "CNN/Feature"
     ],
     "2": [
-        "Category/CNN-Layer"
+        "CNN/Feature"
     ],
-    "0": "High-end-2025-Gaming-PC-Build",
+    "0": "#GamingPC2025",
     "3": [
-        "Weekend/Chill"
+        "Category/LazyWeekend"
     ],
     "4": [
-        "Weekend/Chill"
+        "Category/LazyWeekend"
     ]
 }

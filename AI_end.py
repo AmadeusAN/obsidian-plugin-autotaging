@@ -9,6 +9,7 @@ from vector_db_port import (
     generate_hierarchical_tags,
     assign_index_tags,
     generate_tags_for_alldoc,
+    get_internal_link_for_current_file,
 )
 
 app = Flask(__name__)
@@ -29,6 +30,22 @@ def test():
     ids_tags_maps = generate_tags_for_alldoc(data)
 
     return jsonify({"tags": ids_tags_maps})
+
+
+@app.route("/internal-links", methods=["POST"])
+def internal_link():
+    data = request.get_json(force=True, silent=True) or {}
+    Path("internal_links.json").write_text(json.dumps(data, indent=4))
+    if not data.get("path"):
+        return jsonify({"error": "file_path is required"}), 400
+
+    # return jsonify({"file_path": data.get("path")})
+    result = get_internal_link_for_current_file(data)
+    if "result" in result.keys():
+        internal_link = result["result"]
+    else:
+        internal_link = result["error"]
+    return jsonify({"internal_link": internal_link})
 
 
 @app.route("/api/status", methods=["GET"])

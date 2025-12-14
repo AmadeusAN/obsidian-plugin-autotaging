@@ -114,6 +114,14 @@ export default class HelloworldPlugin extends Plugin {
 			}
 		})
 
+		this.addCommand({
+			id: "add-internal-link-to-file",
+			name: "Add internal link to file",
+			callback: () => {
+				new InternalLinkModal(this.app).open();
+			}
+		})
+
 		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
 			id: 'open-sample-modal-simple',
@@ -327,7 +335,6 @@ export class AllFilesModal extends Modal {
 			.setButtonText("submit")
 			.setCta()
 			.onClick(async () => {
-				this.close();
 				new Notice("submit button clicked")
 				try {
 					// 提取TFile对象中需要的属性，避免循环引用
@@ -369,136 +376,74 @@ export class AllFilesModal extends Modal {
 			.onClick(async () => {
 				new Notice("submit button clicked")
 				try {
-					if (!this.files[1]) {
-						new Notice('No second file found');
-						return;
-					}
-					const file = this.files[1];
-
-					// 假设这里是从服务器获取的响应，是一个路径到tags的字典
-					// 对于示例，我们模拟一个响应；实际中替换为真实的API调用结果
-					const pathToTags = {
-						[file.path]: ['new-tag1', 'new-tag2']  // 可以是字符串如 'single-tag' 或数组
-					};
-
-					const newTags = pathToTags[file.path];
-					if (!newTags) {
-						new Notice(`No tags found for ${file.path}`);
+					if (!this.autoTagResult || Object.keys(this.autoTagResult).length === 0) {
+						new Notice('No auto-tagging results available');
 						return;
 					}
 
-					let content = await this.app.vault.read(file);
+					let processedCount = 0;
+					for (const file of this.files) {
+						const newTags = this.autoTagResult[file.path];
+						if (!newTags) continue;
 
-					// 规范化newTags为数组
-					const tagsToAdd = Array.isArray(newTags) ? newTags : [newTags];
+						try {
+							let content = await this.app.vault.read(file);
+							const tagsToAdd = Array.isArray(newTags) ? newTags : [newTags];
 
-					// 正则匹配frontmatter（YAML块）
-					const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n?/;
-					const match = content.match(frontmatterRegex);
+							// 正则匹配frontmatter（YAML块）
+							const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n?/;
+							const match = content.match(frontmatterRegex);
 
-					let metadata = {};
-					let body = content;
-					let hasFrontmatter = false;
+							let metadata: any = {};
+							let body = content;
+							let hasFrontmatter = false;
 
-					if (match) {
-						hasFrontmatter = true;
-						const yamlStr = match[1];
-						body = content.slice(match[0].length);  // 移除frontmatter后的正文
+							if (match) {
+								hasFrontmatter = true;
+								const yamlStr = match[1];
+								body = content.slice(match[0].length);
 
-						// 手动解析YAML（假设简单结构，无嵌套；实际中可使用js-yaml库）
-						// 这里简单实现：按行分割，处理tags列表
-						const lines = yamlStr.split('\n');
-						let inTags = false;
-						metadata.tags = [];
-
-						for (let line of lines) {
-							line = line.trim();
-							if (line.startsWith('tags:')) {
-								inTags = true;
-								if (line.length > 5) {  // 如 tags: tag1 （但标准是列表）
-									metadata.tags.push(line.slice(5).trim());
+								// 使用js-yaml解析YAML
+								try {
+									metadata = yaml.load(yamlStr) || {};
+								} catch (e) {
+									metadata = {};
 								}
-								continue;
-							}
-							if (inTags) {
-								if (line.startsWith('-')) {
-									metadata.tags.push(line.slice(1).trim());
-								} else if (line === '') {
-									inTags = false;  // 空行结束
-								} else {
-									inTags = false;  // 其他键开始
-									// 处理其他键，但这里只需tags，所以跳过
-								}
+								if (!metadata.tags) metadata.tags = [];
 							} else {
-								// 其他metadata键，保留
-								// 但为简单，我们只需添加tags，不改其他
+								metadata.tags = [];
 							}
+
+							// 添加新tags，避免重复
+							tagsToAdd.forEach(tag => {
+								if (!metadata.tags.includes(tag)) {
+									metadata.tags.push(tag);
+								}
+							});
+
+							// 构建新的frontmatter
+							let newFrontmatter = '';
+							if (hasFrontmatter) {
+								newFrontmatter = '---\n';
+								newFrontmatter += yaml.dump(metadata, { indent: 2 });
+								newFrontmatter += '---\n';
+							} else {
+								newFrontmatter = '---\n';
+								newFrontmatter += yaml.dump({ tags: metadata.tags }, { indent: 2 });
+								newFrontmatter += '---\n';
+							}
+
+							// 组合新内容
+							const newContent = newFrontmatter + body;
+							await this.app.vault.modify(file, newContent);
+							processedCount++;
+						} catch (err) {
+							console.error(`Failed to update tags for ${file.path}:`, err);
+							new Notice(`Failed to update tags for ${file.path}`);
 						}
 					}
 
-					// 添加新tags，避免重复（可选）
-					tagsToAdd.forEach(tag => {
-						if (!metadata.tags.includes(tag)) {
-							metadata.tags.push(tag);
-						}
-					});
-
-					// 构建新的frontmatter
-					let newFrontmatter = '';
-					if (hasFrontmatter) {
-						// 重建原有frontmatter，但更新tags
-						// 为简单，假设我们只需追加/替换tags部分
-						// 但实际需保留其他键。这里简化：如果有create等，需解析所有
-						// 改进：使用完整解析
-						// 假设使用js-yaml（推荐：在插件中安装并import * as yaml from 'js-yaml';）
-						// 注释掉手动解析，使用yaml假设
-						/*
-						if (match) {
-							metadata = yaml.load(match[1]) || {};
-							body = content.slice(match[0].length);
-						}
-						metadata.tags = metadata.tags || [];
-						if (!Array.isArray(metadata.tags)) {
-							metadata.tags = [metadata.tags];
-						}
-						tagsToAdd.forEach(tag => {
-							if (!metadata.tags.includes(tag)) {
-								metadata.tags.push(tag);
-							}
-						});
-						newFrontmatter = '---\n' + yaml.dump(metadata) + '---\n';
-						*/
-						// 但为无库，手动构建
-						newFrontmatter = '---\n';
-						// 假设原有metadata有create，硬编码或从match复制
-						if (match) {
-							let originalFm = match[1].trim();
-							if (originalFm.includes('tags:')) {
-								// 替换tags部分
-								originalFm = originalFm.replace(/tags:\s*([\s\S]*?)(?=\n\w+:|$)/, `tags:\n  - ${metadata.tags.join('\n  - ')}`);
-							} else {
-								originalFm += '\ntags:\n  - ' + metadata.tags.join('\n  - ');
-							}
-							newFrontmatter += originalFm + '\n';
-						} else {
-							newFrontmatter += 'tags:\n  - ' + metadata.tags.join('\n  - ') + '\n';
-						}
-						newFrontmatter += '---\n';
-					} else {
-						// 无frontmatter，创建新
-						newFrontmatter = '---\n';
-						newFrontmatter += 'tags:\n';
-						metadata.tags.forEach(tag => {
-							newFrontmatter += '  - ' + tag + '\n';
-						});
-						newFrontmatter += '---\n';
-					}
-
-					// 组合新内容
-					const newContent = newFrontmatter + body;
-
-					await this.app.vault.modify(file, newContent);
-					new Notice(`Added tags to ${file.path}`);
+					new Notice(`Updated tags for ${processedCount} files`);
 				} catch (err) {
 					console.log(err)
 					new Notice(`Failed to send file to server: ${err}`);
@@ -508,6 +453,97 @@ export class AllFilesModal extends Modal {
 
 	onOpen() {
 		console.log('AllFilesModal opened');
+	}
+
+	onClose() {
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
+
+
+// Modal that sends the current file info to backend and appends returned internal-links at the end
+export class InternalLinkModal extends Modal {
+	private currentFile: TFile | null = null;
+
+	constructor(app: App) {
+		super(app);
+		this.setTitle('Generate Internal Links');
+	}
+
+	async onOpen() {
+		const { contentEl } = this;
+		contentEl.empty();
+
+		// Identify the active markdown file
+		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (!activeView || !activeView.file) {
+			contentEl.createEl('div', { text: 'No active markdown file.', cls: 'no-file' });
+			return;
+		}
+		this.currentFile = activeView.file;
+
+		// Build UI
+		const container = contentEl.createDiv({ cls: 'internal-link-container' });
+		container.createEl('p', { text: `File: ${this.currentFile.path}` });
+
+		new Setting(contentEl)
+			.addButton((btn) =>
+				btn
+					.setButtonText('Generate Links')
+					.setCta()
+					.onClick(async () => {
+						btn.setDisabled(true);
+						btn.setButtonText('Generating…');
+						try {
+							const body = {
+								path: this.currentFile!.path,
+								name: this.currentFile!.name,
+								content: await this.app.vault.read(this.currentFile!),
+							};
+
+							const res = await fetch('http://localhost:5000/internal-links', {
+								method: 'POST',
+								headers: { 'Content-Type': 'application/json' },
+								body: JSON.stringify(body),
+							});
+
+							if (!res.ok) throw new Error(`Server ${res.status}`);
+							const data = await res.json();
+
+							// Extract links from new response structure
+							const links: string[] = data.internal_link?.ids?.flat() || [];
+							if (!links.length) {
+								new Notice('No related files returned');
+								return;
+							}
+
+							// Append links at the end of current file
+							const linkSection =
+								'\n\n## Related\n' +
+								links.map((p) => `[[${p}]]`).join('\n') +
+								'\n';
+
+							const currentContent = await this.app.vault.read(this.currentFile!);
+							await this.app.vault.modify(
+								this.currentFile!,
+								currentContent + linkSection
+							);
+
+							new Notice(`Added ${links.length} internal link(s)`);
+							this.close();
+						} catch (err) {
+							console.error(err);
+							new Notice(`Failed: ${err}`);
+						} finally {
+							btn.setDisabled(false);
+							btn.setButtonText('Generate Links');
+						}
+					})
+			)
+			.addButton((btn) =>
+				btn.setButtonText('Cancel').onClick(() => this.close())
+			);
 	}
 
 	onClose() {

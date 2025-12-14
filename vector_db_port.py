@@ -1,3 +1,4 @@
+from gc import collect
 import chromadb
 from chromadb.api.collection_configuration import collection_configuration_to_json
 from chromadb.utils import embedding_functions
@@ -280,6 +281,45 @@ def generate_tags_for_alldoc(data_metals):
     tag_tree = generate_hierarchical_tags(collection, {})
     ids_tags_maps = assign_index_tags(tag_tree)
     return ids_tags_maps
+
+
+def get_internal_link_for_current_file(data: dict) -> dict:
+    if collection.count() == 0:
+        return {"error": "there is no doc in collection"}
+
+    # 更新数据库
+    collection.upsert(
+        ids=data["path"],
+        documents=data["content"],
+        metadatas={"type": "md"},
+    )
+
+    query_file = collection.get(ids=data["path"], include=["embeddings"])
+
+    results = collection.query(
+        query_embeddings=query_file["embeddings"],
+        include=["distances"],
+    )
+
+    # 过滤掉 distance 为 0 的自身结果，并按阈值保留
+    threshold = 0.5  # 可调整的阈值
+    filtered = {
+        "ids": [],
+        "distances": [],
+    }
+    for ids, dists in zip(results["ids"], results["distances"]):
+        keep_ids = []
+        keep_dists = []
+        for id_, d in zip(ids, dists):
+            if d > 1e-9 and d <= threshold:  # 去掉自身（distance≈0）并保留阈值内
+                keep_ids.append(id_)
+                keep_dists.append(d)
+        filtered["ids"].append(keep_ids)
+        filtered["distances"].append(keep_dists)
+
+    Path("tmp/query.json").write_text(json.dumps(filtered, indent=4))
+
+    return {"result": filtered}
 
 
 if __name__ == "__main__":
