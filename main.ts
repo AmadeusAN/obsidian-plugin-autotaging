@@ -1,5 +1,6 @@
 import { App, Editor, MarkdownView, Menu, Modal, Notice, Plugin, PluginSettingTab, Setting, setIcon, SuggestModal } from 'obsidian';
 import { TFile } from 'obsidian';
+import * as yaml from 'js-yaml';
 
 // Remember to rename these classes and interfaces!
 
@@ -276,6 +277,7 @@ export class CurrentFileModal extends Modal {
 // Modal that lists all markdown files in the vault
 export class AllFilesModal extends Modal {
 	private files: TFile[] = [];
+	private autoTagResult: Record<string, string[]> = {};
 
 	constructor(app: App) {
 		super(app);
@@ -351,8 +353,9 @@ export class AllFilesModal extends Modal {
 					if (!response.ok) { // 先检查状态
 						throw new Error(`Server responded with ${response.status}`);
 					}
-
 					const result = await response.json(); // 添加await
+					console.log(result)
+					this.autoTagResult = result.tags
 					new Notice(`Server response: ${JSON.stringify(result)}`);
 				} catch (err) {
 					console.log(err)
@@ -360,6 +363,147 @@ export class AllFilesModal extends Modal {
 				}
 			}));
 
+
+		new Setting(contentEl).addButton((button) => button.setButtonText("test modify files").setCta()
+			.setCta()
+			.onClick(async () => {
+				new Notice("submit button clicked")
+				try {
+					if (!this.files[1]) {
+						new Notice('No second file found');
+						return;
+					}
+					const file = this.files[1];
+
+					// 假设这里是从服务器获取的响应，是一个路径到tags的字典
+					// 对于示例，我们模拟一个响应；实际中替换为真实的API调用结果
+					const pathToTags = {
+						[file.path]: ['new-tag1', 'new-tag2']  // 可以是字符串如 'single-tag' 或数组
+					};
+
+					const newTags = pathToTags[file.path];
+					if (!newTags) {
+						new Notice(`No tags found for ${file.path}`);
+						return;
+					}
+
+					let content = await this.app.vault.read(file);
+
+					// 规范化newTags为数组
+					const tagsToAdd = Array.isArray(newTags) ? newTags : [newTags];
+
+					// 正则匹配frontmatter（YAML块）
+					const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n?/;
+					const match = content.match(frontmatterRegex);
+
+					let metadata = {};
+					let body = content;
+					let hasFrontmatter = false;
+
+					if (match) {
+						hasFrontmatter = true;
+						const yamlStr = match[1];
+						body = content.slice(match[0].length);  // 移除frontmatter后的正文
+
+						// 手动解析YAML（假设简单结构，无嵌套；实际中可使用js-yaml库）
+						// 这里简单实现：按行分割，处理tags列表
+						const lines = yamlStr.split('\n');
+						let inTags = false;
+						metadata.tags = [];
+
+						for (let line of lines) {
+							line = line.trim();
+							if (line.startsWith('tags:')) {
+								inTags = true;
+								if (line.length > 5) {  // 如 tags: tag1 （但标准是列表）
+									metadata.tags.push(line.slice(5).trim());
+								}
+								continue;
+							}
+							if (inTags) {
+								if (line.startsWith('-')) {
+									metadata.tags.push(line.slice(1).trim());
+								} else if (line === '') {
+									inTags = false;  // 空行结束
+								} else {
+									inTags = false;  // 其他键开始
+									// 处理其他键，但这里只需tags，所以跳过
+								}
+							} else {
+								// 其他metadata键，保留
+								// 但为简单，我们只需添加tags，不改其他
+							}
+						}
+					}
+
+					// 添加新tags，避免重复（可选）
+					tagsToAdd.forEach(tag => {
+						if (!metadata.tags.includes(tag)) {
+							metadata.tags.push(tag);
+						}
+					});
+
+					// 构建新的frontmatter
+					let newFrontmatter = '';
+					if (hasFrontmatter) {
+						// 重建原有frontmatter，但更新tags
+						// 为简单，假设我们只需追加/替换tags部分
+						// 但实际需保留其他键。这里简化：如果有create等，需解析所有
+						// 改进：使用完整解析
+						// 假设使用js-yaml（推荐：在插件中安装并import * as yaml from 'js-yaml';）
+						// 注释掉手动解析，使用yaml假设
+						/*
+						if (match) {
+							metadata = yaml.load(match[1]) || {};
+							body = content.slice(match[0].length);
+						}
+						metadata.tags = metadata.tags || [];
+						if (!Array.isArray(metadata.tags)) {
+							metadata.tags = [metadata.tags];
+						}
+						tagsToAdd.forEach(tag => {
+							if (!metadata.tags.includes(tag)) {
+								metadata.tags.push(tag);
+							}
+						});
+						newFrontmatter = '---\n' + yaml.dump(metadata) + '---\n';
+						*/
+						// 但为无库，手动构建
+						newFrontmatter = '---\n';
+						// 假设原有metadata有create，硬编码或从match复制
+						if (match) {
+							let originalFm = match[1].trim();
+							if (originalFm.includes('tags:')) {
+								// 替换tags部分
+								originalFm = originalFm.replace(/tags:\s*([\s\S]*?)(?=\n\w+:|$)/, `tags:\n  - ${metadata.tags.join('\n  - ')}`);
+							} else {
+								originalFm += '\ntags:\n  - ' + metadata.tags.join('\n  - ');
+							}
+							newFrontmatter += originalFm + '\n';
+						} else {
+							newFrontmatter += 'tags:\n  - ' + metadata.tags.join('\n  - ') + '\n';
+						}
+						newFrontmatter += '---\n';
+					} else {
+						// 无frontmatter，创建新
+						newFrontmatter = '---\n';
+						newFrontmatter += 'tags:\n';
+						metadata.tags.forEach(tag => {
+							newFrontmatter += '  - ' + tag + '\n';
+						});
+						newFrontmatter += '---\n';
+					}
+
+					// 组合新内容
+					const newContent = newFrontmatter + body;
+
+					await this.app.vault.modify(file, newContent);
+					new Notice(`Added tags to ${file.path}`);
+				} catch (err) {
+					console.log(err)
+					new Notice(`Failed to send file to server: ${err}`);
+				}
+			}));
 	}
 
 	onOpen() {

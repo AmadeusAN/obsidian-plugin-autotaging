@@ -33,8 +33,8 @@
             "distance": null,
             "normalized_distance": null
         },
-        "distance": 0.7170263463837445,
-        "normalized_distance": 0.3971921386979556
+        "distance": 0.7013430862985114,
+        "normalized_distance": 0.38808252067284915
     },
     "right_node": {
         "index": 7,
@@ -79,11 +79,11 @@
                 "normalized_distance": null
             },
             "distance": 0.7990382362812583,
-            "normalized_distance": 0.44262209829615046
+            "normalized_distance": 0.4421413412465495
         },
         "distance": 1.5116110095548736,
-        "normalized_distance": 0.8373472087776656
+        "normalized_distance": 0.8364377183226405
     },
-    "distance": 1.805238010838393,
+    "distance": 1.8072009145955292,
     "normalized_distance": 1.0
 }

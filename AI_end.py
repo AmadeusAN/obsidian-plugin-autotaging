@@ -3,6 +3,13 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import json
 from pathlib import Path
+from vector_db_port import (
+    collection,
+    chroma_client,
+    generate_hierarchical_tags,
+    assign_index_tags,
+    generate_tags_for_alldoc,
+)
 
 app = Flask(__name__)
 CORS(app)  # 允许所有来源的跨域请求
@@ -16,12 +23,12 @@ def index():
 @app.route("/test", methods=["POST"])
 def test():
     data = request.get_json(force=True, silent=True) or {}
-    print(data)
-
     data_file = Path("test_connect.json")
     data_file.write_text(json.dumps(data, indent=4))
 
-    return jsonify({"information": "test success"})
+    ids_tags_maps = generate_tags_for_alldoc(data)
+
+    return jsonify({"tags": ids_tags_maps})
 
 
 @app.route("/api/status", methods=["GET"])
