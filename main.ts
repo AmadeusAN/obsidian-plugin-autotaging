@@ -1,5 +1,5 @@
 import { App, Editor, MarkdownView, Menu, Modal, Notice, Plugin, PluginSettingTab, Setting, setIcon, SuggestModal } from 'obsidian';
-import { TFile } from 'obsidian';
+import { TFile, requestUrl } from 'obsidian';
 import * as yaml from 'js-yaml';
 import { spawn, ChildProcess } from 'child_process';
 
@@ -98,35 +98,6 @@ export default class ObsidianPluginAutotagingPlugin extends Plugin {
 		}
 
 		new Notice('Plugin loaded successfully!');
-
-		// 新增一个图标到左侧的Ribbon，并绑定一个鼠标点击事件
-		const ribbonIconEl = this.addRibbonIcon('dice', 'new added icon', (_evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-
-			// 在这个 ribbon 处创建一个上下文菜单
-			const menu = new Menu();
-
-			// 添加一个选项
-			menu.addItem((item) =>
-				item
-					.setTitle('Copy')
-					.setIcon('documents')
-					.onClick(() => {
-						new Notice('Copied');
-						new SampleModal(this.app, (name) => {
-							new Notice(`Hello, ${name}!`);
-						}).open();
-					})
-			);
-
-			// 当鼠标点击事件发生时，显示这个上下文菜单
-			menu.showAtMouseEvent(_evt);
-
-		});
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
-
 
 		this.addCommand({
 			id: "read-current-file",

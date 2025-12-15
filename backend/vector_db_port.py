@@ -88,7 +88,6 @@ def llm_generate_tag(prompt: str) -> str:
         ],
         temperature=0.6,
     )
-    # 通过 API 我们获得了 Kimi 大模型给予我们的回复消息（role=assistant）
     return completion.choices[0].message.content.strip()
 
 
@@ -235,7 +234,7 @@ def generate_hierarchical_tags(collection, tree: dict) -> dict:  # 返回dict
         np.array(all_doc["embeddings"])
     )  # 确保embeddings是np.array
 
-    Path("tree.json").write_text(json.dumps(tree, indent=4))
+    # Path("tree.json").write_text(json.dumps(tree, indent=4))
 
     # 生成 index -> ids 映射字典，后续会用到
     index_to_ids = {idx: doc_id for idx, doc_id in enumerate(all_doc["ids"])}
@@ -247,7 +246,7 @@ def generate_hierarchical_tags(collection, tree: dict) -> dict:  # 返回dict
     # 生成tag树
     tag_tree = assign_tags(tree, doc_contents, index_to_ids, threshold=0.5)
 
-    Path("tag_tree.json").write_text(json.dumps(tag_tree, indent=4))
+    # Path("tag_tree.json").write_text(json.dumps(tag_tree, indent=4))
 
     return tag_tree
 
@@ -276,7 +275,7 @@ def assign_index_tags(tag_tree: dict) -> dict:
 
     dfs(tag_tree, [])
 
-    Path("index_tag_maps.json").write_text(json.dumps(index_tag_maps, indent=4))
+    # Path("index_tag_maps.json").write_text(json.dumps(index_tag_maps, indent=4))
 
     id_map = json.load(Path("tree_id_map.json").open("r"))
 
@@ -333,7 +332,7 @@ def get_internal_link_for_current_file(data: dict) -> dict:
         filtered["ids"].append(keep_ids)
         filtered["distances"].append(keep_dists)
 
-    Path("tmp/query.json").write_text(json.dumps(filtered, indent=4))
+    # Path("tmp/query.json").write_text(json.dumps(filtered, indent=4))
 
     return {"result": filtered}
 

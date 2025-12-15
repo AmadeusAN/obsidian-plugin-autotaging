@@ -13,7 +13,10 @@ from vector_db_port import (
 )
 
 app = Flask(__name__)
-CORS(app)  # 允许所有来源的跨域请求
+CORS(app, origins=["app://obsidian.md"])
+
+# 允许所有来源的跨域请求
+CORS(app)
 
 
 @app.route("/")
@@ -26,8 +29,8 @@ def test():
     data = request.get_json(force=True, silent=True) or {}
     api_key = data.get("api_key")
     data = data.get("files")
-    data_file = Path("test_connect.json")
-    data_file.write_text(json.dumps(data, indent=4))
+    # data_file = Path("test_connect.json")
+    # data_file.write_text(json.dumps(data, indent=4))
 
     ids_tags_maps = entry_generate_tags_for_alldoc(data, api_key)
 
