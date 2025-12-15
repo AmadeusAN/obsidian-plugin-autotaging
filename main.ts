@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Menu, Modal, Notice, Plugin, PluginSettingTab, Setting, setIcon, SuggestModal } from 'obsidian';
+import { App, Editor, FileSystemAdapter, MarkdownView, Menu, Modal, Notice, Plugin, PluginSettingTab, Setting, setIcon, SuggestModal } from 'obsidian';
 import { TFile, requestUrl } from 'obsidian';
 import * as yaml from 'js-yaml';
 import { spawn, ChildProcess } from 'child_process';
@@ -32,7 +32,7 @@ export default class ObsidianPluginAutotagingPlugin extends Plugin {
 
 		// 获取插件目录的绝对路径：this.app.vault.configDir 返回的是 vault 根目录下的 .obsidian 文件夹
 		// 插件目录固定为 .obsidian/plugins/<插件ID>，因此拼接即可
-		const pluginDir = `${this.app.vault.adapter.getBasePath()}/${this.app.vault.configDir}/plugins/obsidian-plugin-autotaging`;
+		const pluginDir = `${(this.app.vault.adapter as FileSystemAdapter).getBasePath()}/${this.app.vault.configDir}/plugins/obsidian-plugin-autotaging`;
 
 		const pythonCmd = pluginDir + "/" + this.settings.pythonPath || 'python';
 		new Notice(pythonCmd);
@@ -304,7 +304,8 @@ export class AllFilesModal extends Modal {
 						extension: file.extension,
 					}));
 
-					const vaultPath = this.app.vault.adapter.basePath;
+					// const vaultPath = this.app.vault.adapter.basePath;
+					const vaultPath = (this.app.vault.adapter as FileSystemAdapter).getBasePath();
 
 					const response = await fetch('http://localhost:5000/get-tags', {
 						method: 'POST',
