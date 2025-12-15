@@ -28,7 +28,7 @@ collection = chroma_client.get_or_create_collection(
     name="main_vault", metadata={"state": "need embedding"}
 )
 
-VAULT_DIR = Path.cwd().parent.parent.parent
+# VAULT_DIR = Path.cwd().parent.parent.parent
 
 data_file_path = Path("test_connect.json")
 
@@ -41,7 +41,7 @@ def init_LLM_client(api_key: str):
     )
 
 
-def init_chroma_db(collection, data_file):
+def init_chroma_db(collection, data_file, vault_path):
     """用于将获取的数据全部写入到 collection 中，
     需要保证 data_file 的结构与 test_connect.json 一致
 
@@ -54,7 +54,8 @@ def init_chroma_db(collection, data_file):
         # ids=[f"{item['path']}" for item in data],
         ids=[f"{item['path']}" for item in data_file],
         documents=[
-            (VAULT_DIR / item["path"]).read_text(encoding="utf-8") for item in data_file
+            (Path(vault_path) / item["path"]).read_text(encoding="utf-8")
+            for item in data_file
         ],
         metadatas=[{"type": item["extension"]} for item in data_file],
     )
@@ -290,9 +291,9 @@ def test_llm():
     print(response)
 
 
-def entry_generate_tags_for_alldoc(data_metals, api_key):
+def entry_generate_tags_for_alldoc(data_metals, api_key, vault_path):
     init_LLM_client(api_key)
-    init_chroma_db(collection, data_metals)
+    init_chroma_db(collection, data_metals, vault_path)
     tag_tree = generate_hierarchical_tags(collection, {})
     ids_tags_maps = assign_index_tags(tag_tree)
     return ids_tags_maps

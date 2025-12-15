@@ -304,6 +304,8 @@ export class AllFilesModal extends Modal {
 						extension: file.extension,
 					}));
 
+					const vaultPath = this.app.vault.adapter.basePath;
+
 					const response = await fetch('http://localhost:5000/get-tags', {
 						method: 'POST',
 						headers: {
@@ -311,6 +313,7 @@ export class AllFilesModal extends Modal {
 						},
 						body: JSON.stringify({
 							files: filesData,
+							vault_path: vaultPath,
 							api_key: this.plugin.settings.api_key
 						})
 					});
