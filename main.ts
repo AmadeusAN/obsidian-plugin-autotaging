@@ -4,12 +4,12 @@ import * as yaml from 'js-yaml';
 
 // Remember to rename these classes and interfaces!
 
-interface MyPluginSettings {
-	mySetting: string;
+interface ObsidianPluginAutotagingSettings {
+	api_key: string;
 }
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
+const DEFAULT_SETTINGS: ObsidianPluginAutotagingSettings = {
+	api_key: 'default'
 }
 
 interface Book {
@@ -32,8 +32,8 @@ const ALL_BOOKS = [
 	},
 ];
 
-export default class HelloworldPlugin extends Plugin {
-	settings: MyPluginSettings;
+export default class ObsidianPluginAutotagingPlugin extends Plugin {
+	settings: ObsidianPluginAutotagingSettings;
 
 	async onload() {
 		await this.loadSettings();
@@ -107,16 +107,16 @@ export default class HelloworldPlugin extends Plugin {
 		})
 
 		this.addCommand({
-			id: "read-file",
-			name: "Read file",
+			id: "generate-tags-for-all-files",
+			name: "generate tags for all files",
 			callback: () => {
-				new AllFilesModal(this.app).open();
+				new AllFilesModal(this.app, this).open();
 			}
 		})
 
 		this.addCommand({
-			id: "add-internal-link-to-file",
-			name: "Add internal link to file",
+			id: "add-internal-links-to-file",
+			name: "Add internal links to file",
 			callback: () => {
 				new InternalLinkModal(this.app).open();
 			}
@@ -173,7 +173,7 @@ export default class HelloworldPlugin extends Plugin {
 		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
+		this.addSettingTab(new ObsidianPluginAutotagingSettingTab(this.app, this));
 
 		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
 		// Using this function will automatically remove the event listener when this plugin is disabled.
@@ -286,11 +286,13 @@ export class CurrentFileModal extends Modal {
 export class AllFilesModal extends Modal {
 	private files: TFile[] = [];
 	private autoTagResult: Record<string, string[]> = {};
+	private plugin: ObsidianPluginAutotagingPlugin;
 
-	constructor(app: App) {
+	constructor(app: App, plugin: ObsidianPluginAutotagingPlugin) {
 		super(app);
 		this.setTitle('All Files');
 		this.loadFiles();
+		this.plugin = plugin;
 	}
 
 	private async loadFiles() {
@@ -335,6 +337,7 @@ export class AllFilesModal extends Modal {
 			.setButtonText("submit")
 			.setCta()
 			.onClick(async () => {
+				button.setButtonText("submitting...")
 				new Notice("submit button clicked")
 				try {
 					// 提取TFile对象中需要的属性，避免循环引用
@@ -342,17 +345,17 @@ export class AllFilesModal extends Modal {
 						path: file.path,
 						name: file.name,
 						extension: file.extension,
-						size: file.size,
-						mtime: file.mtime,
-						ctime: file.ctime
 					}));
 
-					const response = await fetch('http://localhost:5000/test', { // 添加await
+					const response = await fetch('http://localhost:5000/get-tags', {
 						method: 'POST',
 						headers: {
 							'Content-Type': 'application/json'
 						},
-						body: JSON.stringify(filesData)
+						body: JSON.stringify({
+							files: filesData,
+							api_key: this.plugin.settings.api_key
+						})
 					});
 
 					console.log(response)
@@ -362,8 +365,47 @@ export class AllFilesModal extends Modal {
 					}
 					const result = await response.json(); // 添加await
 					console.log(result)
-					this.autoTagResult = result.tags
+					this.autoTagResult = result.tags;
+
+					// Render tags in container
+					const tagContainer = container.createDiv({ cls: 'tags-container' });
+					tagContainer.style.marginTop = '12px';
+					tagContainer.style.padding = '8px';
+					tagContainer.style.border = '1px solid var(--background-modifier-border)';
+					tagContainer.style.borderRadius = '4px';
+					tagContainer.style.maxHeight = '200px';
+					tagContainer.style.overflowY = 'auto';
+
+					tagContainer.createEl('h4', { text: 'Auto-generated Tags', cls: 'tags-header' });
+
+					const list = tagContainer.createEl('ul', { cls: 'tags-list' });
+					list.style.listStyle = 'none';
+					list.style.paddingLeft = '0';
+
+					Object.entries(this.autoTagResult).forEach(([file, tags]) => {
+						const li = list.createEl('li', { cls: 'file-tags' });
+						li.style.marginBottom = '6px';
+
+						const fileSpan = li.createEl('span', { text: file, cls: 'file-path' });
+						fileSpan.style.fontWeight = '600';
+						fileSpan.style.display = 'block';
+
+						const tagList = li.createEl('ul', { cls: 'tag-list' });
+						tagList.style.paddingLeft = '16px';
+						tagList.style.marginTop = '2px';
+
+						const tagArray = Array.isArray(tags) ? tags : [tags];
+						tagArray.forEach((tag: string) => {
+							const tagLi = tagList.createEl('li', { text: tag, cls: 'tag-item' });
+							tagLi.style.fontSize = '0.9em';
+						});
+					});
+
 					new Notice(`Server response: ${JSON.stringify(result)}`);
+					button.setButtonText("resubmit");
+					// this.autoTagResult = result.tags
+					// new Notice(`Server response: ${JSON.stringify(result)}`);
+					// button.setButtonText("resubmit")
 				} catch (err) {
 					console.log(err)
 					new Notice(`Failed to send file to server: ${err}`);
@@ -371,7 +413,7 @@ export class AllFilesModal extends Modal {
 			}));
 
 
-		new Setting(contentEl).addButton((button) => button.setButtonText("test modify files").setCta()
+		new Setting(contentEl).addButton((button) => button.setButtonText("apply tags for files").setCta()
 			.setCta()
 			.onClick(async () => {
 				new Notice("submit button clicked")
@@ -555,10 +597,10 @@ export class InternalLinkModal extends Modal {
 
 
 // 为插件在 setting 中创建一个页面，用于配置插件的设置
-class SampleSettingTab extends PluginSettingTab {
-	plugin: HelloworldPlugin;
+class ObsidianPluginAutotagingSettingTab extends PluginSettingTab {
+	plugin: ObsidianPluginAutotagingPlugin;
 
-	constructor(app: App, plugin: HelloworldPlugin) {
+	constructor(app: App, plugin: ObsidianPluginAutotagingPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
@@ -567,45 +609,18 @@ class SampleSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		containerEl.createEl('h1', { text: 'Heading 1' });
+		containerEl.createEl('h2', { text: 'API Configuration' });
 
-		const book = containerEl.createEl('div', { cls: 'book' });
-		book.createEl('div', { text: 'How to Take Smart Notes', cls: 'book__title' });
-		book.createEl('small', { text: 'Sönke Ahrens', cls: 'book__author' });
-
-		new Setting(containerEl).setName("part 1").setHeading();
 		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
+			.setName('API Key')
+			.setDesc('Enter your API key for the AI service')
 			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
+				.setPlaceholder('sk-...')
+				.setValue(this.plugin.settings.api_key)
 				.onChange(async (value) => {
-					this.plugin.settings.mySetting = value;
+					this.plugin.settings.api_key = value.trim();
 					await this.plugin.saveSettings();
-					new Notice(`value has been changed, ${value}!`);
 				}));
-
-		new Setting(containerEl)
-			.setName('Button')
-			.setDesc('With extra button')
-			.addButton(button => button
-				.setButtonText('Click me!')
-				.onClick(() => {
-					new Notice('This is a notice!');
-				})
-			);
-
-		new Setting(containerEl)
-			.setName('Slider')
-			.setDesc('with tooltip')
-			.addSlider(slider => slider.setDynamicTooltip()
-			);
-
-		new Setting(containerEl)
-			.setName('Progress bar')
-			.setDesc('It\'s 50% done')
-			.addProgressBar(bar => bar.setValue(50));
 	}
 }
 

@@ -1,94 +1,161 @@
-# Obsidian Sample Plugin
+# Obsidian AI Vault Organizer (BETA)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Obsidian Plugin](https://img.shields.io/badge/Obsidian-Plugin-blue?logo=obsidian)](https://obsidian.md/plugins)
+[![Python Backend](https://img.shields.io/badge/Backend-Python%20%2B%20Flask-orange)](https://flask.palletsprojects.com/)
+[![ChromaDB](https://img.shields.io/badge/Vector%20DB-ChromaDB-green)](https://www.trychroma.com/)
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+An intelligent Obsidian plugin that automatically organizes your vault using AI. It builds a **hierarchical tag tree** via embedding + hierarchical clustering, assigns meaningful tags to every note, reorganizes files into folders based on the tag hierarchy, and automatically creates bidirectional internal links between related notes.
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+All heavy AI processing (embedding, clustering, LLM tagging) is handled by a lightweight local Python backend powered by **ChromaDB** and **Moonshot Kimi** (easily replaceable with OpenAI, Claude, Ollama, etc.).
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+## 🎥 Demo Video
 
-## First time developing plugins?
+<!-- Replace the link with your actual demo video (YouTube, Bilibili, etc.) -->
+![Demo Video](tmp/2025-12-15%2010-15-31.gif)
 
-Quick starting guide for new plugin devs:
+## Features
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+- **Automatic Hierarchical Tag Generation**  
+  Uses sentence embeddings + agglomerative hierarchical clustering to build a semantic tag tree. LLM summarizes cluster themes into concise, meaningful tags.
 
-## Releasing new releases
+- **Smart Tag Assignment**  
+  Every note gets one or more hierarchical tags (e.g., `AI/NeuralNetwork/CNN`).
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+- **Vault Auto-Organization** (coming soon)  
+  Creates folder structure mirroring the tag tree and moves files accordingly.
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+- **Automatic Bidirectional Links**  
+  Finds semantically similar notes via vector similarity search and appends `[[Related]]` links.
 
-## Adding your plugin to the community plugin list
+- **Local Vector Database**  
+  Powered by ChromaDB – fast similarity search and incremental updates.
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+- **Extensible Backend** (coming soon)
+  Easy to swap embedding model (Sentence-Transformers, OpenAI, etc.) or LLM provider.
 
-## How to use
+## Installation
 
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+### 1. Install the Obsidian Plugin
 
-## Manually installing the plugin
+1. Download the latest release (`main.js`, `manifest.json`, `styles.css`) from the [Releases](https://github.com/YOUR_USERNAME/YOUR_REPO/releases) page.
+2. Place them in your vault's plugin folder:  
+   `<VaultFolder>/.obsidian/plugins/obsidian-ai-vault-organizer/`
+3. Enable the plugin in Obsidian → Settings → Community plugins.
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+Or use **BRAT** (recommended for development):
+- Add this repo URL in BRAT: `YOUR_USERNAME/YOUR_REPO`
 
-## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint ./src/`
+### 2. Set Up the Python Backend
 
-## Funding URL
+```bash
+# Clone the backend (or copy the Python files into a folder)
+git clone git@github.com:AmadeusAN/obsidian-plugin-autotaging.git
+cd YOUR_REPO/backend
 
-You can include funding URLs where people who use your plugin can financially support it.
+# Create virtual environment (recommended)
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
-
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
+# Install dependencies
+pip install flask flask-cors chromadb openai numpy scipy scikit-learn pandas matplotlib pyyaml
 ```
 
-If you have multiple URLs, you can also do:
+### 3. Start the Backend Server
 
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
+```bash
+python AI_end.py
 ```
 
-## API Documentation
+The server will run at `http://localhost:5000`. Keep it running while using the plugin.
 
-See https://github.com/obsidianmd/obsidian-api
+> Note: The plugin currently assumes the backend is running locally on port 5000.
+
+### 4. Set Up API Key
+
+write your kimi api key in plugin setting page.
+
+## Usage
+
+1. **Generate Tags for All Files**  
+   Open Command Palette → `AI Vault Organizer: Generate tags for all files`  
+   The plugin sends all notes to the backend, builds embeddings, performs clustering, and applies generated tags to frontmatter.
+
+2. **Add Internal Links to Current File**  
+   Open any note → Command Palette → `AI Vault Organizer: Add internal links to file`  
+   Related notes are found via vector similarity and appended under `## Related`.
+
+## Project Structure
+
+```
+obsidian-ai-vault-organizer/
+├── main.ts                 # Obsidian plugin frontend
+├── backend/
+│   ├── AI_end.py           # Flask API server
+│   ├── vector_db_port.py   # ChromaDB + clustering + LLM logic
+│   └── chroma_db/          # Persistent vector database
+└── manifest.json
+```
+
+## Roadmap
+
+- [ ] Auto-create folders based on tag hierarchy and move files
+- [ ] Incremental updates (only process new/changed files)
+- [ ] Support Ollama / local LLMs for fully offline use
+- [ ] UI for configuring embedding model, LLM provider, similarity threshold
+- [ ] Visual tag tree explorer in Obsidian
+
+## Contributing
+
+Contributions are very welcome! Feel free to:
+- Open issues for bugs or feature requests
+- Submit pull requests (especially for folder organization or local LLM support)
+
+## License
+
+[MIT License](LICENSE)
+
+---
+
+**中文版（可折叠）**
+
+<details>
+<summary>点击查看中文说明</summary>
+
+# Obsidian AI Vault Organizer
+
+一个基于 AI 的 Obsidian 智能笔记整理插件，能够自动为整个 Vault 生成层次化的标签体系、为每篇笔记打上语义标签、并基于向量相似度自动添加相关笔记的双向链接。
+
+核心 AI 能力（向量化、层次聚类、标签生成）由本地 Python 后端实现，使用 **ChromaDB** 向量数据库 + **层次聚类** + **大语言模型**（默认 Moonshot Kimi，可替换为 OpenAI、Claude、Ollama 等）。
+
+## 功能亮点
+
+- 自动构建语义层次标签树（embedding + 层次聚类）
+- 为每篇笔记智能分配多层级标签
+- 根据标签树自动创建文件夹并整理文件（开发中）
+- 基于向量相似度自动生成相关笔记的双向链接
+- 本地向量数据库，支持快速检索与增量更新
+- 后端高度可扩展，支持替换 embedding 模型与 LLM
+
+## 安装与使用
+
+（详见上方英文说明）
+
+## 项目结构、技术栈
+
+- 前端：TypeScript + Obsidian Plugin API
+- 后端：Python + Flask + ChromaDB + scikit-learn + Moonshot Kimi API
+- 核心算法：Sentence Embedding → 层次聚类 → LLM 标签归纳 → 向量检索
+
+## 未来规划
+
+- 自动按标签树创建文件夹并移动文件
+- 增量更新（只处理新增/修改笔记）
+- 支持 Ollama 本地大模型，完全离线运行
+- 提供设置面板配置模型与阈值
+- 在 Obsidian 内可视化展示标签树
+
+欢迎提交 Issue 与 PR！
+
+</details>
+
+---
