@@ -6,7 +6,7 @@
 
 An intelligent Obsidian plugin that automatically organizes your vault using AI. It builds a **hierarchical tag tree** via embedding + hierarchical clustering, assigns meaningful tags to every note, reorganizes files into folders based on the tag hierarchy, and automatically creates bidirectional internal links between related notes.
 
-All heavy AI processing (embedding, clustering, LLM tagging) is handled by a lightweight local Python backend powered by **ChromaDB** and **Moonshot Kimi** (easily replaceable with OpenAI, Claude, Ollama, etc.).
+All heavy AI processing (embedding, clustering, LLM tagging) is handled by a lightweight local Python backend powered by **ChromaDB** and **Moonshot Kimi**.
 
 ## 🎥 Demo Video
 
@@ -34,44 +34,23 @@ All heavy AI processing (embedding, clustering, LLM tagging) is handled by a lig
   Easy to swap embedding model (Sentence-Transformers, OpenAI, etc.) or LLM provider.
 
 ## Installation
-
-### 1. Install the Obsidian Plugin
-
-1. Download the latest release (`main.js`, `manifest.json`, `styles.css`) from the [Releases](https://github.com/YOUR_USERNAME/YOUR_REPO/releases) page.
-2. Place them in your vault's plugin folder:  
-   `<VaultFolder>/.obsidian/plugins/obsidian-ai-vault-organizer/`
-3. Enable the plugin in Obsidian → Settings → Community plugins.
-
-Or use **BRAT** (recommended for development):
-- Add this repo URL in BRAT: `YOUR_USERNAME/YOUR_REPO`
-
-### 2. Set Up the Python Backend
+### 1. Set Up the Python Backend
 
 ```bash
+cd <Plugin_test_folder>/.obsidian/plugins
 # Clone the backend (or copy the Python files into a folder)
 git clone git@github.com:AmadeusAN/obsidian-plugin-autotaging.git
-cd YOUR_REPO/backend
-
 # Create virtual environment (recommended)
-python -m venv venv
+uv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
-
 # Install dependencies
-pip install flask flask-cors chromadb openai numpy scipy scikit-learn pandas matplotlib pyyaml
+uv pip install -r requirements.txt
 ```
 
-### 3. Start the Backend Server
+### 2. enable the Obsidian Plugin
+1. Enable the plugin in Obsidian → Settings → Community plugins. It will auto-start the backend server at `http://localhost:5000`. The server will end when you disable the plugin.
 
-```bash
-python AI_end.py
-```
-
-The server will run at `http://localhost:5000`. Keep it running while using the plugin.
-
-> Note: The plugin currently assumes the backend is running locally on port 5000.
-
-### 4. Set Up API Key
-
+### 3. Set Up API Key
 write your kimi api key in plugin setting page.
 
 ## Usage
@@ -134,7 +113,7 @@ Contributions are very welcome! Feel free to:
 - 根据标签树自动创建文件夹并整理文件（开发中）
 - 基于向量相似度自动生成相关笔记的双向链接
 - 本地向量数据库，支持快速检索与增量更新
-- 后端高度可扩展，支持替换 embedding 模型与 LLM
+- 后端高度可扩展，支持替换 embedding 模型与 LLM（开发中）
 
 ## 安装与使用
 

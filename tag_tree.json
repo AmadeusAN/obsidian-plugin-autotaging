@@ -1,11 +1,11 @@
 {
-    "ConvNet": {
-        "#ConvCore": 1,
-        "**CNN-FeatureMap**": 2
+    "ConvolutionalModel": {
+        "#CNN-Convolution": 1,
+        "CNN-FeatureMap": 2
     },
-    "2025HighEndGamingPC": 0,
+    "#2025HighEndGamingPC": 0,
     "WeekendVibes": {
-        "#SlowSaturdayBliss": 3,
-        "#ChillFriday": 4
+        "#WeekendChill": 3,
+        "#CozyFridayFlow": 4
     }
 }

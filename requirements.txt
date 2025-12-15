@@ -1,0 +1,10 @@
+flask
+flask-cors
+chromadb
+openai  # 或 moonshot 的 SDK，如果有
+numpy
+scipy
+scikit-learn
+pandas
+matplotlib
+pyyaml

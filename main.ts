@@ -1,45 +1,103 @@
 import { App, Editor, MarkdownView, Menu, Modal, Notice, Plugin, PluginSettingTab, Setting, setIcon, SuggestModal } from 'obsidian';
 import { TFile } from 'obsidian';
 import * as yaml from 'js-yaml';
+import { spawn, ChildProcess } from 'child_process';
 
 // Remember to rename these classes and interfaces!
 
 interface ObsidianPluginAutotagingSettings {
 	api_key: string;
+	pythonPath: string;
+	backendPath: string;
+	autoStartBackend: boolean;
 }
 
 const DEFAULT_SETTINGS: ObsidianPluginAutotagingSettings = {
-	api_key: 'default'
+	api_key: 'default',
+	pythonPath: '.venv/Scripts/python.exe',
+	backendPath: 'backend\\AI_end.py',
+	autoStartBackend: true
 }
 
-interface Book {
-	title: string;
-	author: string;
-}
-
-const ALL_BOOKS = [
-	{
-		title: 'How to Take Smart Notes',
-		author: 'Sönke Ahrens',
-	},
-	{
-		title: 'Thinking, Fast and Slow',
-		author: 'Daniel Kahneman',
-	},
-	{
-		title: 'Deep Work',
-		author: 'Cal Newport',
-	},
-];
 
 export default class ObsidianPluginAutotagingPlugin extends Plugin {
 	settings: ObsidianPluginAutotagingSettings;
+	private backendProcess: ChildProcess | null = null;
+
+	private async startBackend() {
+		if (this.backendProcess) {
+			new Notice('Backend is already running.');
+			return;
+		}
+
+		// 获取插件目录的绝对路径：this.app.vault.configDir 返回的是 vault 根目录下的 .obsidian 文件夹
+		// 插件目录固定为 .obsidian/plugins/<插件ID>，因此拼接即可
+		const pluginDir = `${this.app.vault.adapter.getBasePath()}/${this.app.vault.configDir}/plugins/obsidian-plugin-autotaging`;
+
+		const pythonCmd = pluginDir + "/" + this.settings.pythonPath || 'python';
+		new Notice(pythonCmd);
+		const scriptPath = pluginDir + "/" + this.settings.backendPath;
+
+		if (!scriptPath) {
+			new Notice('⚠️ Please set the path to AI_end.py in plugin settings.');
+			return;
+		}
+
+		// 启动子进程
+		this.backendProcess = spawn(pythonCmd, [scriptPath]);
+
+		if (!this.backendProcess.pid) {
+			new Notice('❌ Failed to start Python backend.');
+			this.backendProcess = null;
+			return;
+		}
+
+		new Notice('✅ Python backend started (AI_end.py)');
+
+		// 监听输出（调试用，可选）
+		this.backendProcess.stdout?.on('data', (data) => {
+			console.log(`[Backend] ${data}`);
+		});
+
+		this.backendProcess.stderr?.on('data', (data) => {
+			console.error(`[Backend Error] ${data}`);
+		});
+
+		// 进程意外退出时提示
+		this.backendProcess.on('close', (code) => {
+			console.log(`Backend exited with code ${code}`);
+			if (code !== 0) {
+				new Notice(`⚠️ Backend crashed (exit code: ${code})`);
+			}
+			this.backendProcess = null;
+		});
+	}
+	private stopBackend() {
+		if (this.backendProcess) {
+			console.log('Terminating Python backend...');
+			this.backendProcess.kill('SIGTERM');  // 优雅终止
+
+			// 可选：强制杀掉（如果不响应）
+			setTimeout(() => {
+				if (this.backendProcess) {
+					this.backendProcess.kill('SIGKILL');
+					console.log('Backend forcefully killed.');
+				}
+			}, 3000);
+
+			this.backendProcess = null;
+			new Notice('🛑 Python backend stopped.');
+		}
+	}
 
 	async onload() {
 		await this.loadSettings();
 
-		// 输出插件加载信息
-		console.log("plugin has been loaded");
+		if (this.settings.autoStartBackend) {
+			this.startBackend();
+		}
+
+		new Notice('Plugin loaded successfully!');
 
 		// 新增一个图标到左侧的Ribbon，并绑定一个鼠标点击事件
 		const ribbonIconEl = this.addRibbonIcon('dice', 'new added icon', (_evt: MouseEvent) => {
@@ -69,34 +127,6 @@ export default class ObsidianPluginAutotagingPlugin extends Plugin {
 		// Perform additional things with the ribbon
 		ribbonIconEl.addClass('my-plugin-ribbon-class');
 
-
-
-		this.registerEvent(this.app.workspace.on('file-menu', (menu, file) => {
-			// 当用户点击鼠标右键时，显示上下文菜单
-			menu.addItem((item) =>
-				item
-					.setTitle('show file path')
-					.setIcon('documents')
-					.onClick(() => {
-						new Notice(file.path);
-					})
-			);
-		}));
-
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('caillo');
-		setIcon(statusBarItemEl, "dice")
-
-
-		// 给 Plugin 添加一系列的 command
-		this.addCommand({
-			id: 'test command',
-			name: 'test command',
-			callback: () => {
-				new Notice('test command');
-			}
-		});
 
 		this.addCommand({
 			id: "read-current-file",
@@ -133,53 +163,8 @@ export default class ObsidianPluginAutotagingPlugin extends Plugin {
 			}
 		});
 
-		this.addCommand({
-			id: "open-suggestion-modal",
-			name: "Open suggestion modal",
-			callback: () => {
-				new ExampleSuggestModal(this.app).open();
-			}
-		})
-
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCallback: (editor: Editor, _view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app, (name) => {
-							new Notice(`Hello, ${name}!`);
-						}).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-			}
-		});
-
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new ObsidianPluginAutotagingSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
-		});
 
 		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
 		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
@@ -187,6 +172,7 @@ export default class ObsidianPluginAutotagingPlugin extends Plugin {
 
 	onunload() {
 		console.log("plugin has been unloaded");
+		this.stopBackend();
 	}
 
 	async loadSettings() {
@@ -621,26 +607,5 @@ class ObsidianPluginAutotagingSettingTab extends PluginSettingTab {
 					this.plugin.settings.api_key = value.trim();
 					await this.plugin.saveSettings();
 				}));
-	}
-}
-
-
-export class ExampleSuggestModal extends SuggestModal<Book> {
-	// Returns all available suggestions.
-	getSuggestions(query: string): Book[] {
-		return ALL_BOOKS.filter((book) =>
-			book.title.toLowerCase().includes(query.toLowerCase())
-		);
-	}
-
-	// Renders each suggestion item.
-	renderSuggestion(book: Book, el: HTMLElement) {
-		el.createEl('div', { text: book.title });
-		el.createEl('small', { text: book.author });
-	}
-
-	// Perform action on the selected suggestion.
-	onChooseSuggestion(book: Book, evt: MouseEvent | KeyboardEvent) {
-		new Notice(`Selected ${book.title}`);
 	}
 }
